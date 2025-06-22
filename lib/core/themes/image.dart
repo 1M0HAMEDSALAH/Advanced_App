@@ -13,9 +13,5 @@ class AppImages {
   static const String appointmentNavIcon = 'assets/images/calendar-2.png';
   static const String accNavIcon = 'assets/images/aa.jpg';
 
-
-  static const String grneral = 'assets/images/Man Doctor Europe 1.png';
-  static const String brain = 'assets/images/Brain 1.png';
-  static const String two = 'assets/images/Kidneys 1.png';
-  static const String kids = 'assets/images/Iamge.png';
+  static const String defaultProfile = 'assets/images/default_profile.png';
 }

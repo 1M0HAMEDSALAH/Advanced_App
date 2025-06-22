@@ -1,11 +1,20 @@
+// navigation_screen.dart (or where your NavigationScreen is located)
+import 'dart:async'; // Import for Timer
+
+import 'package:advanced_app/core/networking/endpoint.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
+
+import '../../core/networking/api_service.dart';
 import '../../core/themes/color.dart';
 import '../../core/themes/image.dart';
 import '../account/ui/screens/account_screen.dart';
 import '../appointment/ui/screens/appointment_screen.dart';
 import '../home/ui/screens/home_screen.dart';
+import '../inbox/data/repositories/chat_repository.dart';
+import '../inbox/presentation/bloc/chat_bloc.dart';
 import '../inbox/ui/screens/inbox_screen.dart';
 import '../search/ui/screens/search_screen.dart';
 import 'bloc/navigation_bloc.dart';
@@ -13,8 +22,56 @@ import 'bloc/navigation_event.dart';
 import 'bloc/navigation_state.dart';
 import 'nav_bar_items.dart';
 
-class NavigationScreen extends StatelessWidget {
+class NavigationScreen extends StatefulWidget {
+  // Change to StatefulWidget
   const NavigationScreen({super.key});
+
+  @override
+  State<NavigationScreen> createState() => _NavigationScreenState();
+}
+
+class _NavigationScreenState extends State<NavigationScreen> {
+  String _profileImageUrl = ''; // State variable to hold the profile image URL
+  Timer? _imageRefreshTimer; // Timer for periodic image refresh
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImage(); // Load the profile image when the screen initializes
+    _startImageRefreshTimer(); // Start the periodic timer
+  }
+
+  @override
+  void dispose() {
+    _imageRefreshTimer?.cancel(); // Cancel the timer when disposing
+    super.dispose();
+  }
+
+  Future<void> _loadProfileImage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final imageUrl = prefs.getString("Image") ?? "";
+
+      // Only update state if the image URL has changed or if it's the first load
+      if (_profileImageUrl != imageUrl) {
+        setState(() {
+          _profileImageUrl = imageUrl;
+        });
+      }
+    } catch (e) {
+      // Handle any errors in loading the image
+      print('Error loading profile image: $e');
+    }
+  }
+
+  void _startImageRefreshTimer() {
+    _imageRefreshTimer = Timer.periodic(
+      const Duration(seconds: 10), // Refresh every 10 seconds
+      (timer) {
+        _loadProfileImage(); // Reload the profile image
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +85,10 @@ class NavigationScreen extends StatelessWidget {
           if (state.selectedItem == NavbarItem.home) {
             return const HomeScreen();
           } else if (state.selectedItem == NavbarItem.indox) {
-            return const InboxScreen();
+            return BlocProvider(
+              create: (context) => ChatBloc(ChatRepository(ApiService())),
+              child: const InboxScreen(),
+            );
           } else if (state.selectedItem == NavbarItem.search) {
             return const SearchScreen();
           } else if (state.selectedItem == NavbarItem.appointment) {
@@ -69,6 +129,7 @@ class NavigationScreen extends StatelessWidget {
               onTap: (index) => _handleNavTap(context, index),
               items: _getNavItems(),
               isLandscape: false,
+              profileImageUrl: _profileImageUrl, // Pass the image URL
             ),
           ),
         );
@@ -100,6 +161,7 @@ class NavigationScreen extends StatelessWidget {
               onTap: (index) => _handleNavTap(context, index),
               items: _getNavItems(),
               isLandscape: true,
+              profileImageUrl: _profileImageUrl, // Pass the image URL
             ),
           ),
         );
@@ -132,41 +194,45 @@ class NavigationScreen extends StatelessWidget {
     return [
       NavItem(
         iconPath: AppImages.homeNavIcon,
-        // label: AppStrings.homeTitle,
+        itemType: NavItemType.icon, // Explicitly set type for clarity
       ),
       NavItem(
         iconPath: AppImages.inboxNavIcon,
-        // label: AppStrings.orderTitle,
+        itemType: NavItemType.icon,
       ),
       NavItem(
         iconPath: AppImages.searchNavIcon,
-        // label: AppStrings.favTitle,
+        itemType: NavItemType.icon,
       ),
       NavItem(
         iconPath: AppImages.appointmentNavIcon,
-        // label: AppStrings.favTitle,
+        itemType: NavItemType.icon,
       ),
       NavItem(
-        iconPath: AppImages.accNavIcon,
-        // label: AppStrings.accountTitle,
+        iconPath: AppImages.accNavIcon, // This will be the account icon
+        itemType: NavItemType.account, // Mark this as the account item
       ),
     ];
   }
 }
+
+enum NavItemType { icon, account } // Define an enum for item type
 
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final List<NavItem> items;
   final Function(int) onTap;
   final bool isLandscape;
+  final String profileImageUrl; // New parameter for profile image URL
 
   const CustomBottomNavBar({
-    Key? key,
+    super.key,
     required this.currentIndex,
     required this.items,
     required this.onTap,
     required this.isLandscape,
-  }) : super(key: key);
+    required this.profileImageUrl, // Require the new parameter
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -203,8 +269,8 @@ class CustomBottomNavBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildNavIcon(
-                      items[index].iconPath,
+                    _buildNavItemWidget(
+                      items[index],
                       index == currentIndex,
                       iconSize,
                     ),
@@ -218,30 +284,47 @@ class CustomBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavIcon(String iconPath, bool isSelected, double size) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      child: ColorFiltered(
+  Widget _buildNavItemWidget(NavItem item, bool isSelected, double size) {
+    if (item.itemType == NavItemType.account) {
+      return CircleAvatar(
+        radius: size / 2, // Adjust radius based on iconSize
+        backgroundColor: Colors.white, // Background for the avatar
+        child: CircleAvatar(
+          radius: size / 2 - 2, // Slightly smaller for border effect
+          backgroundImage: profileImageUrl.isNotEmpty
+              ? NetworkImage("${EndPoints.baseUrlImages}$profileImageUrl")
+              : const AssetImage(AppImages.defaultProfile) as ImageProvider,
+          // Add error handling for network images
+          onBackgroundImageError: profileImageUrl.isNotEmpty
+              ? (exception, stackTrace) {
+                  print('Error loading profile image: $exception');
+                }
+              : null,
+        ),
+      );
+    } else {
+      // Original icon building logic
+      return ColorFiltered(
         colorFilter: ColorFilter.mode(
           isSelected ? AppColors.primary : Colors.grey,
           BlendMode.srcIn,
         ),
         child: Image.asset(
-          iconPath,
+          item.iconPath,
           width: size,
           height: size,
         ),
-      ),
-    );
+      );
+    }
   }
 }
 
 class NavItem {
   final String iconPath;
-  // final String label;
+  final NavItemType itemType;
 
   NavItem({
     required this.iconPath,
-    // required this.label,
+    this.itemType = NavItemType.icon,
   });
 }

@@ -25,7 +25,7 @@ class CustomTextFormField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 24, right: 24, top: 8),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 8),
       child: TextFormField(
         controller: controller,
         obscureText: obscureText,
@@ -43,7 +43,7 @@ class CustomTextFormField extends StatelessWidget {
           contentPadding:
               const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
           filled: true,
-          fillColor: Color(0xFFFDFDFF),
+          fillColor: const Color(0xFFFDFDFF),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey.shade400),

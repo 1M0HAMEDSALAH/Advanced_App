@@ -29,6 +29,12 @@ dependencies:
   flutter_screenutil: ^5.9.0
   intl_phone_field: ^3.2.0
   equatable: ^2.0.7
+  shared_preferences: ^2.5.3
+  bloc: ^8.1.4
+  flutter_map: 7.0.2
+  flutter_rating_bar: ^4.0.0
+  image_picker: ^1.1.2
+  permission_handler: ^12.0.0+1
 
 dev_dependencies:
   flutter_test:
@@ -42,15 +48,15 @@ flutter_native_splash:
   # color: "#ffffff"  # Background color (white in this case)
   # If you want to use your background image instead of color, remove the color line and use:
   background_image: assets/images/BackGroundImage.png
-  
+
   # Android configuration
   android: true
   android_gravity: center
-  
+
   # iOS configuration
   ios: true
   ios_content_mode: center
-  
+
   # Dark mode configuration (optional)
   # dark_mode_image: assets/images/Frame 1000005357 (1).png  # Optional dark mode image
   # dark_mode_color: "#121212"  # Optional dark mode background color
